@@ -1,0 +1,6 @@
+object_with_region:
+  ros__parameters:
+    detections_3d_topic: "/object_detection/detections_3d"
+    objects_with_region_topic: "/object_detection/objects_with_region"
+    get_region_name_service: "/get_region_name"
+    label_info_topic: "/smarthome/object_detection/label_info"
