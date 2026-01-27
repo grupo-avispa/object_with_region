@@ -146,7 +146,7 @@ This package is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE
 
 ## Authors
 
-- **Óscar Pons Fernández** - [@OscarPonsFdz](https://github.com/OscarPonsFdz)
+- **Óscar Pons Fernández** - [@opfernandez](https://github.com/opfernandez)
 - **Grupo Avispa, DTE, Universidad de Málaga**
 
 ## References
