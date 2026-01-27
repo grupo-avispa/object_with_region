@@ -4,3 +4,4 @@ object_with_region:
     objects_with_region_topic: "/object_detection/objects_with_region"
     get_region_name_service: "/get_region_name"
     label_info_topic: "/smarthome/object_detection/label_info"
+    get_region_enabled: true

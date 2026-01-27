@@ -85,6 +85,9 @@ private:
   // Service name to get the region name from a position.
   std::string get_region_name_service_;
 
+  // Flag to enable/disable getting region info
+  bool get_region_enabled_;
+
   /// Class labels of the neural network.
   std::vector<std::string> labels_;
 

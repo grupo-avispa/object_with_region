@@ -71,9 +71,11 @@ ObjectWithRegionNode::ObjectWithRegionNode() : Node("object_with_region_node")
     object_with_region_pub_ = this->create_publisher<object_with_region::msg::ObjectRegion3DArray>(
         objects_with_region_topic_, 10);
     
-    // Create client to get region name from position
-    get_region_name_client_ = this->create_client<semantic_navigation_msgs::srv::GetRegionName>(
-        get_region_name_service_);
+    if(get_region_enabled_){
+      // Create client to get region name from position
+      get_region_name_client_ = this->create_client<semantic_navigation_msgs::srv::GetRegionName>(
+          get_region_name_service_);
+    }
 }
 
 ObjectWithRegionNode::~ObjectWithRegionNode()
@@ -106,33 +108,27 @@ void ObjectWithRegionNode::detection_callback(const vision_msgs::msg::Detection3
     // Transform the detection to the map frame
     geometry_msgs::msg::PointStamped detection_position;
     detection_position.header = detection.header;
-    detection_position.header.frame_id = "map";
-    try
-    {
-      auto transform = tf_buffer_->lookupTransform(
-        "map", detection.header.frame_id,
-        detection.header.stamp, tf2::durationFromSec(1.0));
-      tf2::doTransform(detection.bbox.center.position, detection_position.point, transform);
-    }
-    catch (const tf2::TransformException & ex)
-    {
-      RCLCPP_WARN(this->get_logger(), "Could not transform detection to map frame: %s", ex.what());
-      continue;
-    }
-
-    // Call the service to get the region name
-    auto region_name = client_call(detection_position);
-    if (region_name.empty()){continue;}
+    
     // Create ObjectRegion3D message
     object_with_region::msg::ObjectRegion3D object_region_msg;
     object_region_msg.object = detection;
-    object_region_msg.region = region_name;
+    object_region_msg.object.results[0].hypothesis.class_id = 
+      labels_[std::stoi(detection.results[0].hypothesis.class_id)];
+    object_region_msg.region = "unknown";
     object_region_msg.header = msg->header;
+
+    // Call the service to get the region name
+    if (get_region_enabled_){
+      auto region_name = client_call(detection_position);
+      if (region_name.empty()){continue;}
+      object_region_msg.region = region_name;
+    }
 
     // Add to array
     object_region_array_msg.objects.push_back(object_region_msg);
     RCLCPP_INFO(this->get_logger(), "Object %s assigned to region: %s", 
-      labels_[std::stoi(detection.results[0].hypothesis.class_id)].c_str(), region_name.c_str());
+      labels_[std::stoi(detection.results[0].hypothesis.class_id)].c_str(), 
+      object_region_msg.region.c_str());
   }
   // Publish the objects with region
   object_with_region_pub_->publish(object_region_array_msg);
@@ -207,6 +203,17 @@ void ObjectWithRegionNode::get_params()
   RCLCPP_INFO(
     this->get_logger(),
     "The parameter get_region_name_service is set to: [%s]", get_region_name_service_.c_str());
+
+
+  declare_parameter_if_not_declared(
+    this, "get_region_enabled",
+    rclcpp::ParameterValue(true),
+    rcl_interfaces::msg::ParameterDescriptor()
+    .set__description("Boolean to enable/disable getting region names"));
+  this->get_parameter("get_region_enabled", get_region_enabled_);
+  RCLCPP_INFO(
+    this->get_logger(),
+    "The parameter get_region_enabled is set to: [%s]", get_region_enabled_ ? "true" : "false");
 }
 
 } // namespace object_with_region
