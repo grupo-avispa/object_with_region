@@ -55,6 +55,7 @@ find_package(nav2_util REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(semantic_navigation_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
@@ -98,6 +99,7 @@ target_link_libraries(${EXECUTABLE_NAME}
   ${tf2_sensor_msgs_TARGETS}
   ${tf2_geometry_msgs_TARGETS}
   ${semantic_navigation_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
 )
 
 # Add dependency on the generated interfaces
@@ -142,5 +144,6 @@ ament_export_dependencies(
   tf2_sensor_msgs
   tf2_geometry_msgs
   semantic_navigation_msgs
+  geometry_msgs
 )
 ament_package()
