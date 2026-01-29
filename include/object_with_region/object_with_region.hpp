@@ -23,8 +23,8 @@
 #include "vision_msgs/msg/label_info.hpp"
 #include "vision_msgs/msg/bounding_box3_d.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
+#include "tf2_ros/buffer.hpp"
+#include "tf2_ros/transform_listener.hpp"
 
 #include "object_with_region/msg/object_region3_d_array.hpp"
 #include "semantic_navigation_msgs/srv/get_region_name.hpp"
@@ -39,7 +39,6 @@ public:
   ~ObjectWithRegionNode();
 
 private:
-
   // Callback for detections 3D subscriber
   void detection_callback(const vision_msgs::msg::Detection3DArray::SharedPtr msg);
 
@@ -47,7 +46,7 @@ private:
   void get_params();
 
   // Call the service to get the region name from a position
-  std::string client_call(const geometry_msgs::msg::PointStamped &position);
+  std::string client_call(const geometry_msgs::msg::PointStamped & position);
 
   // Callback for label info subscriber
   void label_info_callback(const vision_msgs::msg::LabelInfo::SharedPtr info);
@@ -69,7 +68,7 @@ private:
 
   // The buffer of the transformations tree.
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  
+
   // The listener of the transformations tree.
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
