@@ -127,7 +127,7 @@ void ObjectWithRegionNode::detection_callback(const vision_msgs::msg::Detection3
     // Add to array
     object_region_array_msg.objects.push_back(object_region_msg);
     RCLCPP_INFO(this->get_logger(), "Object %s assigned to region: %s", 
-      labels_[std::stoi(detection.results[0].hypothesis.class_id)].c_str(), 
+     object_region_msg.object.results[0].hypothesis.class_id.c_str(), 
       object_region_msg.region.c_str());
   }
   // Publish the objects with region
