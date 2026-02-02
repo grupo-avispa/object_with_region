@@ -50,20 +50,20 @@ endif()
 # ###############################################
 # # Find ament macros and libraries
 find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(semantic_navigation_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(vision_msgs REQUIRED)
 
-##########################
-## Declare ROS messages ##
-##########################
+# #########################
+# # Declare ROS messages ##
+# #########################
 set(msg_files
   "msg/ObjectRegion3D.msg"
   "msg/ObjectRegion3DArray.msg"
@@ -107,7 +107,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typ
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC "${cpp_typesupport_target}")
 
 if("$ENV{ROS_DISTRO}" STREQUAL "jazzy" OR
-   "$ENV{ROS_DISTRO}" STREQUAL "humble")
+  "$ENV{ROS_DISTRO}" STREQUAL "humble")
   target_link_libraries(${EXECUTABLE_NAME} PUBLIC nav2_util::nav2_util_core)
 elseif("$ENV{ROS_DISTRO}" STREQUAL "rolling")
   target_link_libraries(${EXECUTABLE_NAME}
@@ -136,14 +136,14 @@ install(DIRECTORY launch params
 # ##################################
 ament_export_include_directories(include/${PROJECT_NAME})
 ament_export_dependencies(
+  geometry_msgs
   nav2_util
   rclcpp
-  std_srvs
-  tf2_ros
-  vision_msgs
-  tf2_sensor_msgs
-  tf2_geometry_msgs
   semantic_navigation_msgs
-  geometry_msgs
+  std_srvs
+  tf2_geometry_msgs
+  tf2_ros
+  tf2_sensor_msgs
+  vision_msgs
 )
 ament_package()
