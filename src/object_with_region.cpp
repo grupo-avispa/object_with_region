@@ -112,10 +112,17 @@ void ObjectWithRegionNode::detection_callback(const vision_msgs::msg::Detection3
     // Create ObjectRegion3D message
     object_with_region::msg::ObjectRegion3D object_region_msg;
     object_region_msg.object = detection;
-    object_region_msg.object.results[0].hypothesis.class_id = 
+    try{
+      object_region_msg.object.results[0].hypothesis.class_id = 
       labels_[std::stoi(detection.results[0].hypothesis.class_id)];
-    object_region_msg.region = "unknown";
-    object_region_msg.header = msg->header;
+      object_region_msg.region = "unknown";
+      object_region_msg.header = msg->header;
+    }
+    catch (const std::exception &e){ {
+      RCLCPP_WARN(this->get_logger(), "Could not process detection: %s", 
+        detection.results[0].hypothesis.class_id.c_str());
+      continue;
+    }
 
     // Call the service to get the region name
     if (get_region_enabled_){
@@ -217,4 +224,3 @@ void ObjectWithRegionNode::get_params()
 }
 
 } // namespace object_with_region
-
