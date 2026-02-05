@@ -110,6 +110,7 @@ void ObjectWithRegionNode::detection_callback(
     // Transform the detection to the map frame
     geometry_msgs::msg::PointStamped detection_position;
     detection_position.header = detection.header;
+    detection_position.point = detection.bbox.center.position;
 
     // Create ObjectRegion3D message
     object_with_region::msg::ObjectRegion3D object_region_msg;
