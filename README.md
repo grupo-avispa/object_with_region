@@ -1,7 +1,8 @@
 # object_with_region
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
+![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
+![License](https://img.shields.io/github/license/grupo-avispa/object_with_region)
+[![Build](https://github.com/grupo-avispa/object_with_region/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/grupo-avispa/object_with_region/actions/workflows/build.yml)
 ## Description
 
 `object_with_region` is a ROS 2 package that enriches 3D object detections with semantic region information. This node takes three-dimensional object detections and assigns them to the spatial region where they are located (e.g., "kitchen", "living room", "bedroom"), facilitating semantic navigation and spatial reasoning in mobile robotics.
@@ -88,13 +89,13 @@ ros2 launch object_with_region default.launch.py
 
 The node accepts the following parameters (defined in [params/params.yaml](params/params.yaml)):
 
-| Parameter | Type | Default Value | Description |
-|-----------|------|-------------------|-------------|
-| `detections_3d_topic` | string | `/object_detection/detections_3d` | Input topic with 3D detections |
-| `label_info_topic` | string | `/smarthome/object_detection/label_info` | Topic with class label information |
-| `objects_with_region_topic` | string | `/object_detection/objects_with_region` | Output topic with objects enriched with region information |
-| `get_region_name_service` | string | `/get_region_name` | Service name to get the region from a position |
-| `get_region_enabled` | bool | `true` | Enable/disable region querying (useful for debugging) |
+| Parameter                   | Type   | Default Value                            | Description                                                |
+| --------------------------- | ------ | ---------------------------------------- | ---------------------------------------------------------- |
+| `detections_3d_topic`       | string | `/object_detection/detections_3d`        | Input topic with 3D detections                             |
+| `label_info_topic`          | string | `/smarthome/object_detection/label_info` | Topic with class label information                         |
+| `objects_with_region_topic` | string | `/object_detection/objects_with_region`  | Output topic with objects enriched with region information |
+| `get_region_name_service`   | string | `/get_region_name`                       | Service name to get the region from a position             |
+| `get_region_enabled`        | bool   | `true`                                   | Enable/disable region querying (useful for debugging)      |
 
 
 ## Topics
