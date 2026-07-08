@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "rclcpp/version.h"
-#include "nav2_util/string_utils.hpp"
 #include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
@@ -24,14 +23,10 @@
 
 // For Kilted compatibility in Message Filters API change
 #if RCLCPP_VERSION_GTE(29, 6, 0)
-#include "nav2_ros_common/node_utils.hpp"
 #include "tf2/LinearMath/Quaternion.hpp"
-using nav2::declare_parameter_if_not_declared;
 // For Humble and Older compatibility in Message Filters API change
 #else
-#include "nav2_util/node_utils.hpp"
 #include "tf2/LinearMath/Quaternion.h"
-using nav2_util::declare_parameter_if_not_declared;
 #endif
 
 using std::placeholders::_1;
@@ -42,41 +37,40 @@ namespace object_with_region
 ObjectWithRegionNode::ObjectWithRegionNode()
 : Node("object_with_region_node")
 {
-    // Get parameters from parameter server
+  // Get parameters from parameter server
   get_params();
 
-    // Initialize transform buffer and listener
+  // Initialize transform buffer and listener
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    // Create callback group for subscribers
+  // Create callback group for subscribers
   sub_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   rclcpp::SubscriptionOptions sub_options;
   sub_options.callback_group = sub_cb_group_;
 
-    // Create detections 3D subscriber
+  // Create detections 3D subscriber
   detection_sub_ = this->create_subscription<vision_msgs::msg::Detection3DArray>(
-        detections_3d_topic_, 10,
-        std::bind(&ObjectWithRegionNode::detection_callback, this, _1),
-        sub_options);
+    detections_3d_topic_, 10,
+    std::bind(&ObjectWithRegionNode::detection_callback, this, _1),
+    sub_options);
 
-    // Create label info subscriber
+  // Create label info subscriber
   label_info_sub_ = this->create_subscription<vision_msgs::msg::LabelInfo>(
-                    label_info_topic_,
-                    10,
-                    std::bind(&ObjectWithRegionNode::label_info_callback, this,
-      std::placeholders::_1),
-        sub_options);
+    label_info_topic_,
+    10,
+    std::bind(&ObjectWithRegionNode::label_info_callback, this, std::placeholders::_1),
+    sub_options);
 
 
-    // Create objects with region publisher
+  // Create objects with region publisher
   object_with_region_pub_ = this->create_publisher<object_with_region::msg::ObjectRegion3DArray>(
-        objects_with_region_topic_, 10);
+    objects_with_region_topic_, 10);
 
-  if(get_region_enabled_) {
-      // Create client to get region name from position
+  if (get_region_enabled_) {
+    // Create client to get region name from position
     get_region_name_client_ = this->create_client<semantic_navigation_msgs::srv::GetRegionName>(
-          get_region_name_service_);
+      get_region_name_service_);
   }
 }
 

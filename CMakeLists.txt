@@ -51,7 +51,6 @@ endif()
 # # Find ament macros and libraries
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(nav2_util REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(semantic_navigation_msgs REQUIRED)
@@ -106,16 +105,6 @@ target_link_libraries(${EXECUTABLE_NAME}
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC "${cpp_typesupport_target}")
 
-if("$ENV{ROS_DISTRO}" STREQUAL "jazzy" OR
-  "$ENV{ROS_DISTRO}" STREQUAL "humble")
-  target_link_libraries(${EXECUTABLE_NAME} PUBLIC nav2_util::nav2_util_core)
-elseif("$ENV{ROS_DISTRO}" STREQUAL "rolling")
-  target_link_libraries(${EXECUTABLE_NAME}
-    PRIVATE
-    nav2_util::nav2_util_core
-  )
-endif()
-
 # ############
 # # Install ##
 # ############
@@ -137,7 +126,6 @@ install(DIRECTORY launch params
 ament_export_include_directories(include/${PROJECT_NAME})
 ament_export_dependencies(
   geometry_msgs
-  nav2_util
   rclcpp
   semantic_navigation_msgs
   std_srvs
