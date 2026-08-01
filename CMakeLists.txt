@@ -80,6 +80,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 set(EXECUTABLE_NAME ${PROJECT_NAME}_node)
 
 add_executable(${EXECUTABLE_NAME}
+  src/detection_processor.cpp
   src/object_with_region.cpp
   src/main.cpp
 )
