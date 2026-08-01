@@ -13,21 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "rclcpp/version.h"
-#include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-
 #include "object_with_region/msg/object_region3_d.hpp"
 #include "object_with_region/object_with_region.hpp"
-
-
-// For Kilted compatibility in Message Filters API change
-#if RCLCPP_VERSION_GTE(29, 6, 0)
-#include "tf2/LinearMath/Quaternion.hpp"
-// For Humble and Older compatibility in Message Filters API change
-#else
-#include "tf2/LinearMath/Quaternion.h"
-#endif
 
 using std::placeholders::_1;
 
@@ -39,10 +26,6 @@ ObjectWithRegionNode::ObjectWithRegionNode()
 {
   // Get parameters from parameter server
   get_params();
-
-  // Initialize transform buffer and listener
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   // Create callback group for subscribers
   sub_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);

@@ -55,9 +55,6 @@ find_package(rclcpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(semantic_navigation_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_sensor_msgs REQUIRED)
 find_package(vision_msgs REQUIRED)
 
 # #########################
@@ -93,10 +90,7 @@ target_link_libraries(${EXECUTABLE_NAME}
   PUBLIC
   rclcpp::rclcpp
   ${std_srvs_TARGETS}
-  tf2_ros::tf2_ros
   ${vision_msgs_TARGETS}
-  ${tf2_sensor_msgs_TARGETS}
-  ${tf2_geometry_msgs_TARGETS}
   ${semantic_navigation_msgs_TARGETS}
   ${geometry_msgs_TARGETS}
 )
@@ -129,9 +123,6 @@ ament_export_dependencies(
   rclcpp
   semantic_navigation_msgs
   std_srvs
-  tf2_geometry_msgs
-  tf2_ros
-  tf2_sensor_msgs
   vision_msgs
 )
 ament_package()
