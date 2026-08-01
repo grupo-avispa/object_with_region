@@ -23,8 +23,6 @@
 #include "vision_msgs/msg/label_info.hpp"
 #include "vision_msgs/msg/bounding_box3_d.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
-#include "tf2_ros/buffer.hpp"
-#include "tf2_ros/transform_listener.hpp"
 
 #include "object_with_region/msg/object_region3_d_array.hpp"
 #include "semantic_navigation_msgs/srv/get_region_name.hpp"
@@ -86,12 +84,6 @@ private:
 
   // The callback group for info subscribers
   rclcpp::CallbackGroup::SharedPtr sub_cb_group_;
-
-  // The buffer of the transformations tree.
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-
-  // The listener of the transformations tree.
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   // Topic of the detected objects in 3 dimensions.
   std::string detections_3d_topic_;
