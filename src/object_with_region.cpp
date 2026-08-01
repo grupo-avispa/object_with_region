@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <chrono>
+
 #include "object_with_region/msg/object_region3_d.hpp"
 #include "object_with_region/object_with_region.hpp"
 
@@ -20,6 +22,14 @@ using std::placeholders::_1;
 
 namespace object_with_region
 {
+
+namespace
+{
+// Depth of the subscription/publisher queues.
+constexpr int kDefaultQueueDepth = 10;
+// Bound on how long to wait for the region service to become available.
+constexpr std::chrono::seconds kServiceWaitTimeout{1};
+}  // namespace
 
 ObjectWithRegionNode::ObjectWithRegionNode()
 : Node("object_with_region_node")
@@ -34,7 +44,7 @@ ObjectWithRegionNode::ObjectWithRegionNode()
 
   // Create detections 3D subscriber
   detection_sub_ = this->create_subscription<vision_msgs::msg::Detection3DArray>(
-    detections_3d_topic_, 10,
+    detections_3d_topic_, kDefaultQueueDepth,
     std::bind(&ObjectWithRegionNode::detection_callback, this, _1),
     sub_options);
 
@@ -51,7 +61,7 @@ ObjectWithRegionNode::ObjectWithRegionNode()
 
   // Create objects with region publisher
   object_with_region_pub_ = this->create_publisher<object_with_region::msg::ObjectRegion3DArray>(
-    objects_with_region_topic_, 10);
+    objects_with_region_topic_, kDefaultQueueDepth);
 
   if (get_region_enabled_) {
     // Create client to get region name from position
@@ -148,16 +158,18 @@ std::string ObjectWithRegionNode::client_call(const geometry_msgs::msg::PointSta
     // Wait for the service with a bounded total timeout: an unbounded retry
     // loop here would block this callback (and its callback group) forever
     // if the service never becomes available.
-  if (!get_region_name_client_->wait_for_service(std::chrono::seconds(1))) {
+  if (!get_region_name_client_->wait_for_service(kServiceWaitTimeout)) {
     RCLCPP_ERROR(
       this->get_logger(), "Service %s not available, skipping",
       get_region_name_service_.c_str());
     return result;       // empty result
   }
 
-  using namespace std::chrono_literals;
   auto future = get_region_name_client_->async_send_request(request);
-  std::future_status status = future.wait_for(std::chrono::seconds(5));    // timeout to guarantee a graceful finish
+  // Timeout to guarantee a graceful finish if the service accepts the
+  // request but never responds.
+  std::future_status status = future.wait_for(
+    std::chrono::duration<double>(service_call_timeout_));
   if (status == std::future_status::ready) {
     result = future.get()->region_name;
   } else {
@@ -219,6 +231,16 @@ void ObjectWithRegionNode::get_params()
   RCLCPP_INFO(
     this->get_logger(),
     "The parameter get_region_enabled is set to: [%s]", get_region_enabled_ ? "true" : "false");
+
+  declare_parameter_if_not_declared(
+    this, "service_call_timeout",
+    rclcpp::ParameterValue(5.0),
+    rcl_interfaces::msg::ParameterDescriptor()
+    .set__description("Timeout in seconds to wait for the region service response"));
+  this->get_parameter("service_call_timeout", service_call_timeout_);
+  RCLCPP_INFO(
+    this->get_logger(),
+    "The parameter service_call_timeout is set to: [%.2f]", service_call_timeout_);
 }
 
 } // namespace object_with_region
