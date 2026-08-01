@@ -40,11 +40,23 @@ constexpr std::chrono::seconds kRequestReaperPeriod{1};
 }  // namespace
 
 ObjectWithRegionNode::ObjectWithRegionNode()
-: Node("object_with_region_node")
+: rclcpp_lifecycle::LifecycleNode("object_with_region_node")
 {
-  // Get parameters from parameter server
+  // Get parameters from parameter server. ROS entities (subscriptions,
+  // publisher, client, TF) are created in on_configure() instead, so this
+  // node can be configured/activated independently of construction, per the
+  // managed node lifecycle.
   get_params();
+}
 
+ObjectWithRegionNode::~ObjectWithRegionNode()
+{
+}
+
+
+ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_configure(
+  const rclcpp_lifecycle::State & /*state*/)
+{
   // Initialize transform buffer and listener
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -70,7 +82,6 @@ ObjectWithRegionNode::ObjectWithRegionNode()
     std::bind(&ObjectWithRegionNode::label_info_callback, this, std::placeholders::_1),
     sub_options);
 
-
   // Create objects with region publisher
   object_with_region_pub_ = this->create_publisher<object_with_region::msg::ObjectRegion3DArray>(
     objects_with_region_topic_, kDefaultQueueDepth);
@@ -88,10 +99,48 @@ ObjectWithRegionNode::ObjectWithRegionNode()
       std::bind(&ObjectWithRegionNode::reap_timed_out_requests, this),
       sub_cb_group_);
   }
+
+  return CallbackReturn::SUCCESS;
 }
 
-ObjectWithRegionNode::~ObjectWithRegionNode()
+
+ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_activate(
+  const rclcpp_lifecycle::State & /*state*/)
 {
+  object_with_region_pub_->on_activate();
+  return CallbackReturn::SUCCESS;
+}
+
+
+ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_deactivate(
+  const rclcpp_lifecycle::State & /*state*/)
+{
+  object_with_region_pub_->on_deactivate();
+  return CallbackReturn::SUCCESS;
+}
+
+
+ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_cleanup(
+  const rclcpp_lifecycle::State & /*state*/)
+{
+  request_reaper_timer_.reset();
+  get_region_name_client_.reset();
+  object_with_region_pub_.reset();
+  label_info_sub_.reset();
+  detection_sub_.reset();
+  sub_cb_group_.reset();
+  tf_listener_.reset();
+  tf_buffer_.reset();
+  pending_requests_.clear();
+  labels_.clear();
+  return CallbackReturn::SUCCESS;
+}
+
+
+ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_shutdown(
+  const rclcpp_lifecycle::State & state)
+{
+  return on_cleanup(state);
 }
 
 void ObjectWithRegionNode::label_info_callback(const vision_msgs::msg::LabelInfo::SharedPtr info)
@@ -107,6 +156,13 @@ void ObjectWithRegionNode::label_info_callback(const vision_msgs::msg::LabelInfo
 void ObjectWithRegionNode::detection_callback(
   const vision_msgs::msg::Detection3DArray::SharedPtr msg)
 {
+  // Subscriptions stay up across the inactive state (they are only torn down
+  // on cleanup/shutdown); avoid doing any work, including TF/service calls,
+  // while not active.
+  if (this->get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    return;
+  }
+
   // This callbacks needs labels_ vector initialized
   if(labels_.empty()) {
     RCLCPP_ERROR(this->get_logger(), "Labels vector not initialized yet ...");

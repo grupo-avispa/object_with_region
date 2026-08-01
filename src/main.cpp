@@ -23,7 +23,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   rclcpp::executors::MultiThreadedExecutor exe;
   auto node = std::make_shared<object_with_region::ObjectWithRegionNode>();
-  exe.add_node(node);
+  exe.add_node(node->get_node_base_interface());
   exe.spin();
   rclcpp::shutdown();
   return 0;

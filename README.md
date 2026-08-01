@@ -14,6 +14,7 @@
 - **Label Resolution**: Converts numeric class IDs to human-readable class names.
 - **Configurable Mode**: Allows enabling/disabling region querying via parameters.
 - **TF2 Transformation Support**: Transforms each detection's position into `target_frame` before querying the region service.
+- **Managed Lifecycle**: Implemented as a lifecycle node, so it only starts processing once explicitly configured and activated.
 
 ## Architecture
 
@@ -81,6 +82,22 @@ To launch the node with default configuration:
 
 ```bash
 ros2 launch object_with_region default.launch.py
+```
+
+## Lifecycle
+
+`object_with_region_node` is a managed lifecycle node
+([design.ros2.org: Managed Nodes](https://design.ros2.org/articles/node_lifecycle.html)): it does
+not create any subscription, publisher or service client until it is configured, and it does not
+publish until it is activated. This keeps it from processing or publishing anything before
+`label_info_topic` has actually been consumed and the node is ready.
+
+The provided launch file drives the `configure` and `activate` transitions automatically (see the
+`autostart` parameter below); outside of it, transition the node manually, e.g.:
+
+```bash
+ros2 lifecycle set /object_with_region configure
+ros2 lifecycle set /object_with_region activate
 ```
 
 ## Parameters
