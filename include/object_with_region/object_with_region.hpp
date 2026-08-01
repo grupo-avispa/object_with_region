@@ -100,6 +100,9 @@ private:
   // Flag to enable/disable getting region info
   bool get_region_enabled_;
 
+  // Timeout in seconds to wait for the region service response.
+  double service_call_timeout_;
+
   /// Class labels of the neural network.
   std::vector<std::string> labels_;
 
