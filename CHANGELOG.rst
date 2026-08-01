@@ -36,6 +36,15 @@ Changed
   ``ObjectRegion3D.msg``. ``object`` already carries its own header (or the
   ``ObjectRegion3DArray`` header is authoritative if it does not).
 
+Added
+-----
+- Added ``test/test_detection_processor.cpp``, a ``gtest`` suite covering
+  ``build_object_region()``: missing results, non-numeric class_id,
+  out-of-range and negative class_id, and the happy path. Wired up via
+  ``ament_add_gtest`` and a new ``BUILD_TESTING`` block in ``CMakeLists.txt``.
+  Replaced the ``ament_cmake_test`` test_depend, which does not provide gtest
+  support, with ``ament_cmake_gtest`` in ``package.xml``.
+
 [0.1.0] - 25-07-2026
 =====================
 
