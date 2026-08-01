@@ -13,7 +13,6 @@
 - **Semantic Region Querying**: Uses a semantic navigation service to determine which region each detected object is in.
 - **Label Resolution**: Converts numeric class IDs to human-readable class names.
 - **Configurable Mode**: Allows enabling/disabling region querying via parameters.
-- **TF2 Transformation Support**: Handles transformations between different reference frames.
 
 ## Architecture
 
@@ -41,10 +40,6 @@ The node acts as an intermediary between a 3D object detector and high-level rea
 - `vision_msgs`: Standard vision messages for ROS
 - `std_msgs`: Standard ROS messages
 - `geometry_msgs`: Geometry messages
-- `tf2_ros`: Transformation library
-- `tf2_geometry_msgs`: Geometry conversions for TF2
-- `tf2_sensor_msgs`: Sensor message conversions for TF2
-- `nav2_util` / `nav2_ros_common`: Nav2 utilities (depending on ROS version)
 - `semantic_navigation_msgs`: Custom messages for semantic navigation 
 
 ## Installation
@@ -92,10 +87,11 @@ The node accepts the following parameters (defined in [params/params.yaml](param
 | Parameter                   | Type   | Default Value                            | Description                                                |
 | --------------------------- | ------ | ---------------------------------------- | ---------------------------------------------------------- |
 | `detections_3d_topic`       | string | `/object_detection/detections_3d`        | Input topic with 3D detections                             |
-| `label_info_topic`          | string | `/smarthome/object_detection/label_info` | Topic with class label information                         |
+| `label_info_topic`          | string | `/object_detection/label_info`           | Topic with class label information                         |
 | `objects_with_region_topic` | string | `/object_detection/objects_with_region`  | Output topic with objects enriched with region information |
 | `get_region_name_service`   | string | `/get_region_name`                       | Service name to get the region from a position             |
 | `get_region_enabled`        | bool   | `true`                                   | Enable/disable region querying (useful for debugging)      |
+| `service_call_timeout`      | double | `5.0`                                    | Timeout in seconds to wait for the region service response |
 
 
 ## Topics

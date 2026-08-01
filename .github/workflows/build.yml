@@ -42,7 +42,7 @@ jobs:
           files: ros_ws/lcov/total_coverage.info,ros_ws/coveragepy/.coverage
           flags: unittests
           name: codecov-umbrella
-          slug: grupo-avispa/dsr_ros
+          slug: grupo-avispa/object_with_region
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
