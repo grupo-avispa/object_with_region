@@ -4,21 +4,8 @@ CHANGELOG
 
 All notable changes to the ``object_with_region`` package will be documented in this file.
 
-[Unreleased]
-============
-
-Changed
--------
-- **Breaking:** ``ObjectWithRegionNode`` is now a managed lifecycle node
-  (``rclcpp_lifecycle::LifecycleNode``) instead of a plain ``rclcpp::Node``.
-  Subscriptions, the publisher, the TF buffer/listener, the region client and
-  its timeout reaper are created in ``on_configure()`` rather than the
-  constructor; the publisher is a ``LifecyclePublisher`` activated in
-  ``on_activate()`` / deactivated in ``on_deactivate()``; ``on_cleanup()`` and
-  ``on_shutdown()`` tear everything back down. ``detection_callback()`` is now
-  a no-op unless the node is in the active state. ``main.cpp`` adds the node
-  to the executor via ``get_node_base_interface()``. New ``rclcpp_lifecycle``
-  and ``lifecycle_msgs`` dependencies.
+[0.2.0] - 25-07-2026
+=====================
 
 Added
 -----
@@ -26,13 +13,18 @@ Added
   ``ObjectWithRegionNode`` to actually transform each detection's position into
   ``target_frame`` before calling ``get_region_name_service``, and documented the
   frame contract in the README.
-
-Fixed
------
-- Fixed the region service receiving detection positions in the original sensor
-  frame instead of the frame it expects.
-- Detection position now falls back to the ``Detection3DArray`` header when a
-  single ``Detection3D`` does not carry its own ``frame_id``.
+- Added ``test/test_detection_processor.cpp``, a ``gtest`` suite covering
+  ``build_object_region()``: missing results, non-numeric class_id,
+  out-of-range and negative class_id, and the happy path. Wired up via
+  ``ament_add_gtest`` and a new ``BUILD_TESTING`` block in ``CMakeLists.txt``.
+  Replaced the ``ament_cmake_test`` test_depend, which does not provide gtest
+  support, with ``ament_cmake_gtest`` in ``package.xml``.
+- Added an ``autostart`` launch argument (default ``True``) to
+  ``launch/default.launch.py``: when true, the launch file emits the
+  ``configure`` lifecycle transition on start and ``activate`` once the node
+  reports ``inactive``, via ``launch_ros`` lifecycle events. The node's own
+  code has no autostart logic; set ``autostart:=False`` to leave the node
+  unconfigured for an external lifecycle manager to drive instead.
 
 Changed
 -------
@@ -48,9 +40,6 @@ Changed
 - **Breaking:** Removed the redundant ``std_msgs/Header header`` field from
   ``ObjectRegion3D.msg``. ``object`` already carries its own header (or the
   ``ObjectRegion3DArray`` header is authoritative if it does not).
-
-Changed
--------
 - **Performance:** Replaced the per-detection blocking region-service call in
   ``ObjectWithRegionNode`` with an asynchronous pipeline: ``detection_callback()``
   now issues all region requests for a frame via ``async_send_request()`` and
@@ -63,15 +52,26 @@ Changed
   (``reap_timed_out_requests()``). This also supersedes the bounded
   ``wait_for_service`` wait added earlier: an unavailable service is now
   detected via ``service_is_ready()`` without blocking at all.
+- **Breaking:** ``ObjectWithRegionNode`` is now a managed lifecycle node
+  (``rclcpp_lifecycle::LifecycleNode``) instead of a plain ``rclcpp::Node``.
+  Subscriptions, the publisher, the TF buffer/listener, the region client and
+  its timeout reaper are created in ``on_configure()`` rather than the
+  constructor; the publisher is a ``LifecyclePublisher`` activated in
+  ``on_activate()`` / deactivated in ``on_deactivate()``; ``on_cleanup()`` and
+  ``on_shutdown()`` tear everything back down. ``detection_callback()`` is now
+  a no-op unless the node is in the active state. ``main.cpp`` adds the node
+  to the executor via ``get_node_base_interface()``. New ``rclcpp_lifecycle``
+  and ``lifecycle_msgs`` dependencies.
+- ``launch/default.launch.py`` now launches ``object_with_region_node`` via
+  ``launch_ros.actions.LifecycleNode`` instead of ``Node``, required to track
+  and drive its lifecycle state from the launch file.
 
-Added
+Fixed
 -----
-- Added ``test/test_detection_processor.cpp``, a ``gtest`` suite covering
-  ``build_object_region()``: missing results, non-numeric class_id,
-  out-of-range and negative class_id, and the happy path. Wired up via
-  ``ament_add_gtest`` and a new ``BUILD_TESTING`` block in ``CMakeLists.txt``.
-  Replaced the ``ament_cmake_test`` test_depend, which does not provide gtest
-  support, with ``ament_cmake_gtest`` in ``package.xml``.
+- Fixed the region service receiving detection positions in the original sensor
+  frame instead of the frame it expects.
+- Detection position now falls back to the ``Detection3DArray`` header when a
+  single ``Detection3D`` does not carry its own ``frame_id``.
 
 [0.1.0] - 25-07-2026
 =====================
