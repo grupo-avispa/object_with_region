@@ -16,6 +16,7 @@
 #ifndef OBJECT_WITH_REGION__OBJECT_WITH_REGION_HPP_
 #define OBJECT_WITH_REGION__OBJECT_WITH_REGION_HPP_
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,8 @@
 #include "vision_msgs/msg/label_info.hpp"
 #include "vision_msgs/msg/bounding_box3_d.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
+#include "tf2_ros/buffer.hpp"
+#include "tf2_ros/transform_listener.hpp"
 
 #include "object_with_region/msg/object_region3_d_array.hpp"
 #include "semantic_navigation_msgs/srv/get_region_name.hpp"
@@ -67,6 +70,11 @@ private:
   // Call the service to get the region name from a position
   std::string client_call(const geometry_msgs::msg::PointStamped & position);
 
+  // Transform a stamped point into target_frame_. Returns std::nullopt if the
+  // transform is not available.
+  std::optional<geometry_msgs::msg::PointStamped> transform_to_target_frame(
+    const geometry_msgs::msg::PointStamped & input);
+
   // Callback for label info subscriber
   void label_info_callback(const vision_msgs::msg::LabelInfo::SharedPtr info);
 
@@ -85,6 +93,12 @@ private:
   // The callback group for info subscribers
   rclcpp::CallbackGroup::SharedPtr sub_cb_group_;
 
+  // The buffer of the transformations tree.
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+
+  // The listener of the transformations tree.
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
   // Topic of the detected objects in 3 dimensions.
   std::string detections_3d_topic_;
 
@@ -102,6 +116,9 @@ private:
 
   // Timeout in seconds to wait for the region service response.
   double service_call_timeout_;
+
+  // Frame in which detection positions are expressed before querying the region service.
+  std::string target_frame_;
 
   /// Class labels of the neural network.
   std::vector<std::string> labels_;

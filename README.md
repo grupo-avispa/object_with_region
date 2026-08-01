@@ -13,6 +13,7 @@
 - **Semantic Region Querying**: Uses a semantic navigation service to determine which region each detected object is in.
 - **Label Resolution**: Converts numeric class IDs to human-readable class names.
 - **Configurable Mode**: Allows enabling/disabling region querying via parameters.
+- **TF2 Transformation Support**: Transforms each detection's position into `target_frame` before querying the region service.
 
 ## Architecture
 
@@ -40,6 +41,8 @@ The node acts as an intermediary between a 3D object detector and high-level rea
 - `vision_msgs`: Standard vision messages for ROS
 - `std_msgs`: Standard ROS messages
 - `geometry_msgs`: Geometry messages
+- `tf2_ros`: Transformation library
+- `tf2_geometry_msgs`: Geometry conversions for TF2
 - `semantic_navigation_msgs`: Custom messages for semantic navigation 
 
 ## Installation
@@ -92,7 +95,15 @@ The node accepts the following parameters (defined in [params/params.yaml](param
 | `get_region_name_service`   | string | `/get_region_name`                       | Service name to get the region from a position             |
 | `get_region_enabled`        | bool   | `true`                                   | Enable/disable region querying (useful for debugging)      |
 | `service_call_timeout`      | double | `5.0`                                    | Timeout in seconds to wait for the region service response |
+| `target_frame`              | string | `map`                                    | Frame detection positions are transformed into before querying the region service |
 
+## Frames
+
+`get_region_name_service` is assumed to interpret positions in `target_frame`. Each
+detection's position is transformed from its own frame (or the `detections_3d_topic`
+message frame, if the detection does not carry one) into `target_frame` via TF2 before
+the service is called; the detection itself is still published in its original frame.
+If no transform is available, that detection is skipped and logged as a warning.
 
 ## Topics
 
