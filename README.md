@@ -84,6 +84,13 @@ To launch the node with default configuration:
 ros2 launch object_with_region default.launch.py
 ```
 
+To launch it without automatically configuring/activating it (e.g. when an external lifecycle
+manager will drive it instead):
+
+```bash
+ros2 launch object_with_region default.launch.py autostart:=False
+```
+
 ## Lifecycle
 
 `object_with_region_node` is a managed lifecycle node
@@ -92,8 +99,10 @@ not create any subscription, publisher or service client until it is configured,
 publish until it is activated. This keeps it from processing or publishing anything before
 `label_info_topic` has actually been consumed and the node is ready.
 
-The provided launch file drives the `configure` and `activate` transitions automatically (see the
-`autostart` parameter below); outside of it, transition the node manually, e.g.:
+The `autostart` launch argument (default `True`) controls whether `default.launch.py` drives the
+`configure` and `activate` transitions automatically; this is done entirely from the launch file
+via lifecycle launch events, not from the node's own code. With `autostart:=False`, or outside of
+the launch file, transition the node manually, e.g.:
 
 ```bash
 ros2 lifecycle set /object_with_region configure
