@@ -51,7 +51,9 @@ endif()
 # # Find ament macros and libraries
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(semantic_navigation_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -93,6 +95,8 @@ target_include_directories(${EXECUTABLE_NAME} PUBLIC
 target_link_libraries(${EXECUTABLE_NAME}
   PUBLIC
   rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
+  ${lifecycle_msgs_TARGETS}
   ${std_srvs_TARGETS}
   tf2_ros::tf2_ros
   ${vision_msgs_TARGETS}
@@ -147,7 +151,9 @@ endif()
 ament_export_include_directories(include/${PROJECT_NAME})
 ament_export_dependencies(
   geometry_msgs
+  lifecycle_msgs
   rclcpp
+  rclcpp_lifecycle
   semantic_navigation_msgs
   std_srvs
   tf2_geometry_msgs

@@ -7,6 +7,19 @@ All notable changes to the ``object_with_region`` package will be documented in 
 [Unreleased]
 ============
 
+Changed
+-------
+- **Breaking:** ``ObjectWithRegionNode`` is now a managed lifecycle node
+  (``rclcpp_lifecycle::LifecycleNode``) instead of a plain ``rclcpp::Node``.
+  Subscriptions, the publisher, the TF buffer/listener, the region client and
+  its timeout reaper are created in ``on_configure()`` rather than the
+  constructor; the publisher is a ``LifecyclePublisher`` activated in
+  ``on_activate()`` / deactivated in ``on_deactivate()``; ``on_cleanup()`` and
+  ``on_shutdown()`` tear everything back down. ``detection_callback()`` is now
+  a no-op unless the node is in the active state. ``main.cpp`` adds the node
+  to the executor via ``get_node_base_interface()``. New ``rclcpp_lifecycle``
+  and ``lifecycle_msgs`` dependencies.
+
 Added
 -----
 - Added ``target_frame`` parameter and reintroduced the TF2 buffer/listener in

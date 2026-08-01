@@ -23,7 +23,10 @@
 #include <string>
 #include <vector>
 
+#include "lifecycle_msgs/msg/state.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
+#include "rclcpp_lifecycle/lifecycle_publisher.hpp"
 #include "vision_msgs/msg/label_info.hpp"
 #include "vision_msgs/msg/bounding_box3_d.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
@@ -70,11 +73,31 @@ struct PendingRegionRequest
   bool resolved{false};
 };
 
-class ObjectWithRegionNode : public rclcpp::Node
+class ObjectWithRegionNode : public rclcpp_lifecycle::LifecycleNode
 {
 public:
+  using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
   ObjectWithRegionNode();
   ~ObjectWithRegionNode();
+
+protected:
+  // Create the TF buffer/listener, subscriptions, publisher and (if
+  // get_region_enabled_) the region client and its timeout reaper timer.
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
+
+  // Activate the publisher so publish() actually sends messages.
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
+
+  // Deactivate the publisher; subscriptions keep running but
+  // detection_callback() becomes a no-op while inactive.
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
+
+  // Tear down everything created in on_configure().
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
+
+  // Tear down everything, regardless of the state being shut down from.
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
 private:
   /**
@@ -133,7 +156,8 @@ private:
   rclcpp::Subscription<vision_msgs::msg::LabelInfo>::SharedPtr label_info_sub_;
 
   // Objects with region publisher
-  rclcpp::Publisher<object_with_region::msg::ObjectRegion3DArray>::SharedPtr object_with_region_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<object_with_region::msg::ObjectRegion3DArray>::SharedPtr
+    object_with_region_pub_;
 
   // Client to get region name from position
   rclcpp::Client<semantic_navigation_msgs::srv::GetRegionName>::SharedPtr get_region_name_client_;
