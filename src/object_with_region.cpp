@@ -15,6 +15,10 @@
 
 #include <chrono>
 
+#include "tf2/exceptions.h"
+#include "tf2/time.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+
 #include "object_with_region/msg/object_region3_d.hpp"
 #include "object_with_region/object_with_region.hpp"
 
@@ -36,6 +40,10 @@ ObjectWithRegionNode::ObjectWithRegionNode()
 {
   // Get parameters from parameter server
   get_params();
+
+  // Initialize transform buffer and listener
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   // Create callback group for subscribers
   sub_cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -118,11 +126,6 @@ void ObjectWithRegionNode::detection_callback(
       continue;
     }
 
-    // Transform the detection to the map frame
-    geometry_msgs::msg::PointStamped detection_position;
-    detection_position.header = detection.header;
-    detection_position.point = detection.bbox.center.position;
-
     // Create ObjectRegion3D message
     object_with_region::msg::ObjectRegion3D object_region_msg;
     object_region_msg.object = detection;
@@ -132,7 +135,17 @@ void ObjectWithRegionNode::detection_callback(
 
     // Call the service to get the region name
     if (get_region_enabled_) {
-      auto region_name = client_call(detection_position);
+      // Detection3DArray commonly carries the frame in the array header rather than
+      // in each Detection3D, so fall back to it when the per-detection one is empty.
+      geometry_msgs::msg::PointStamped detection_position;
+      detection_position.header =
+        !detection.header.frame_id.empty() ? detection.header : msg->header;
+      detection_position.point = detection.bbox.center.position;
+
+      auto target_position = transform_to_target_frame(detection_position);
+      if (!target_position) {continue;}
+
+      auto region_name = client_call(*target_position);
       if (region_name.empty()) {continue;}
       object_region_msg.region = region_name;
     }
@@ -146,6 +159,20 @@ void ObjectWithRegionNode::detection_callback(
   }
   // Publish the objects with region
   object_with_region_pub_->publish(object_region_array_msg);
+}
+
+
+std::optional<geometry_msgs::msg::PointStamped> ObjectWithRegionNode::transform_to_target_frame(
+  const geometry_msgs::msg::PointStamped & input)
+{
+  try {
+    return tf_buffer_->transform(input, target_frame_, tf2::durationFromSec(0.2));
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_WARN(
+      this->get_logger(), "Could not transform detection from '%s' to '%s': %s",
+      input.header.frame_id.c_str(), target_frame_.c_str(), ex.what());
+    return std::nullopt;
+  }
 }
 
 
@@ -241,6 +268,17 @@ void ObjectWithRegionNode::get_params()
   RCLCPP_INFO(
     this->get_logger(),
     "The parameter service_call_timeout is set to: [%.2f]", service_call_timeout_);
+
+  declare_parameter_if_not_declared(
+    this, "target_frame",
+    rclcpp::ParameterValue("map"),
+    rcl_interfaces::msg::ParameterDescriptor()
+    .set__description(
+      "Frame in which detection positions are expressed before querying the region service"));
+  this->get_parameter("target_frame", target_frame_);
+  RCLCPP_INFO(
+    this->get_logger(),
+    "The parameter target_frame is set to: [%s]", target_frame_.c_str());
 }
 
 } // namespace object_with_region

@@ -4,6 +4,23 @@ CHANGELOG
 
 All notable changes to the ``object_with_region`` package will be documented in this file.
 
+[Unreleased]
+============
+
+Added
+-----
+- Added ``target_frame`` parameter and reintroduced the TF2 buffer/listener in
+  ``ObjectWithRegionNode`` to actually transform each detection's position into
+  ``target_frame`` before calling ``get_region_name_service``, and documented the
+  frame contract in the README.
+
+Fixed
+-----
+- Fixed the region service receiving detection positions in the original sensor
+  frame instead of the frame it expects.
+- Detection position now falls back to the ``Detection3DArray`` header when a
+  single ``Detection3D`` does not carry its own ``frame_id``.
+
 [0.1.0] - 25-07-2026
 =====================
 
