@@ -55,10 +55,13 @@ ObjectWithRegionNode::ObjectWithRegionNode()
     std::bind(&ObjectWithRegionNode::detection_callback, this, _1),
     sub_options);
 
-  // Create label info subscriber
+  // Create label info subscriber.
+  // Label maps are typically published once with a transient local QoS, so this
+  // subscription must match it or it may never receive the message.
+  auto label_info_qos = rclcpp::QoS(1).transient_local().reliable();
   label_info_sub_ = this->create_subscription<vision_msgs::msg::LabelInfo>(
     label_info_topic_,
-    10,
+    label_info_qos,
     std::bind(&ObjectWithRegionNode::label_info_callback, this, std::placeholders::_1),
     sub_options);
 
