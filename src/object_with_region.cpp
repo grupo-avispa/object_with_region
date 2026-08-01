@@ -162,13 +162,14 @@ std::string ObjectWithRegionNode::client_call(const geometry_msgs::msg::PointSta
     // Create the request
   auto request = std::make_shared<semantic_navigation_msgs::srv::GetRegionName::Request>();
   request->position = position;
-    // Wait for service
-  while (!get_region_name_client_->wait_for_service(std::chrono::milliseconds(500))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-      return result;       // empty result
-    }
-    RCLCPP_DEBUG(this->get_logger(), "service not available, waiting again...");
+    // Wait for the service with a bounded total timeout: an unbounded retry
+    // loop here would block this callback (and its callback group) forever
+    // if the service never becomes available.
+  if (!get_region_name_client_->wait_for_service(std::chrono::seconds(1))) {
+    RCLCPP_ERROR(
+      this->get_logger(), "Service %s not available, skipping",
+      get_region_name_service_.c_str());
+    return result;       // empty result
   }
 
   using namespace std::chrono_literals;
