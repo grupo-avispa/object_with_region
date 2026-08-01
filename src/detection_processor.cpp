@@ -43,8 +43,7 @@ std::optional<object_with_region::msg::ObjectRegion3D> build_object_region(
 
   object_with_region::msg::ObjectRegion3D object_region;
   object_region.object = detection;
-  object_region.object.results[0].hypothesis.class_id =
-    labels[static_cast<std::size_t>(class_index)];
+  object_region.class_name = labels[static_cast<std::size_t>(class_index)];
   object_region.region = "unknown";
   return object_region;
 }

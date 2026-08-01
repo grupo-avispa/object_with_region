@@ -28,6 +28,13 @@ Changed
   ``object_with_region::detection_processor::build_object_region()``
   (``include/object_with_region/detection_processor.hpp``,
   ``src/detection_processor.cpp``), enabling direct unit testing.
+- **Breaking:** ``ObjectRegion3D.msg`` no longer overwrites
+  ``object.results[0].hypothesis.class_id`` with the resolved label; the
+  numeric id is preserved and the human-readable label is now published in a
+  new ``string class_name`` field.
+- **Breaking:** Removed the redundant ``std_msgs/Header header`` field from
+  ``ObjectRegion3D.msg``. ``object`` already carries its own header (or the
+  ``ObjectRegion3DArray`` header is authoritative if it does not).
 
 [0.1.0] - 25-07-2026
 =====================
