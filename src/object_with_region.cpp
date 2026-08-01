@@ -19,6 +19,7 @@
 #include "tf2/time.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
+#include "object_with_region/detection_processor.hpp"
 #include "object_with_region/msg/object_region3_d.hpp"
 #include "object_with_region/object_with_region.hpp"
 
@@ -105,33 +106,14 @@ void ObjectWithRegionNode::detection_callback(
   object_region_array_msg.header = msg->header;
 
   for (const auto & detection : msg->detections) {
-    if (detection.results.empty()) {
-      RCLCPP_WARN(this->get_logger(), "Detection without results, skipping");
-      continue;
-    }
-
-    const auto & class_id_str = detection.results[0].hypothesis.class_id;
-    int class_index = 0;
-    try {
-      class_index = std::stoi(class_id_str);
-    } catch (const std::exception &) {
+    auto object_region = detection_processor::build_object_region(detection, labels_);
+    if (!object_region) {
       RCLCPP_WARN(
-        this->get_logger(), "Non-numeric class_id '%s', skipping", class_id_str.c_str());
+        this->get_logger(),
+        "Could not process detection: missing results or invalid class_id, skipping");
       continue;
     }
-    if (class_index < 0 || static_cast<std::size_t>(class_index) >= labels_.size()) {
-      RCLCPP_WARN(
-        this->get_logger(), "class_id %d out of range (%zu labels), skipping",
-        class_index, labels_.size());
-      continue;
-    }
-
-    // Create ObjectRegion3D message
-    object_with_region::msg::ObjectRegion3D object_region_msg;
-    object_region_msg.object = detection;
-    object_region_msg.object.results[0].hypothesis.class_id = labels_[class_index];
-    object_region_msg.region = "unknown";
-    object_region_msg.header = msg->header;
+    object_region->header = msg->header;
 
     // Call the service to get the region name
     if (get_region_enabled_) {
@@ -147,15 +129,15 @@ void ObjectWithRegionNode::detection_callback(
 
       auto region_name = client_call(*target_position);
       if (region_name.empty()) {continue;}
-      object_region_msg.region = region_name;
+      object_region->region = region_name;
     }
 
     // Add to array
-    object_region_array_msg.objects.push_back(object_region_msg);
+    object_region_array_msg.objects.push_back(*object_region);
     RCLCPP_INFO(this->get_logger(),
       "Object %s assigned to region: %s",
-      object_region_msg.object.results[0].hypothesis.class_id.c_str(),
-      object_region_msg.region.c_str());
+      object_region->object.results[0].hypothesis.class_id.c_str(),
+      object_region->region.c_str());
   }
   // Publish the objects with region
   object_with_region_pub_->publish(object_region_array_msg);

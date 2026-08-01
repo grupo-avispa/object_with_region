@@ -21,6 +21,14 @@ Fixed
 - Detection position now falls back to the ``Detection3DArray`` header when a
   single ``Detection3D`` does not carry its own ``frame_id``.
 
+Changed
+-------
+- Extracted the label-resolution and validation logic out of
+  ``ObjectWithRegionNode::detection_callback()`` into a pure, ROS-free function
+  ``object_with_region::detection_processor::build_object_region()``
+  (``include/object_with_region/detection_processor.hpp``,
+  ``src/detection_processor.cpp``), enabling direct unit testing.
+
 [0.1.0] - 25-07-2026
 =====================
 
