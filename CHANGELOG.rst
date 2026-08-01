@@ -36,6 +36,21 @@ Changed
   ``ObjectRegion3D.msg``. ``object`` already carries its own header (or the
   ``ObjectRegion3DArray`` header is authoritative if it does not).
 
+Changed
+-------
+- **Performance:** Replaced the per-detection blocking region-service call in
+  ``ObjectWithRegionNode`` with an asynchronous pipeline: ``detection_callback()``
+  now issues all region requests for a frame via ``async_send_request()`` and
+  returns immediately, instead of blocking the callback (and its callback
+  group) for up to ``service_call_timeout`` seconds per detection. A new
+  ``PendingFrame``/``PendingRegionRequest`` pair (declared in
+  ``object_with_region.hpp``) accumulates the resolved objects for a frame and
+  publishes it once every detection has been resolved, either from the
+  service response or from a periodic timeout reaper
+  (``reap_timed_out_requests()``). This also supersedes the bounded
+  ``wait_for_service`` wait added earlier: an unavailable service is now
+  detected via ``service_is_ready()`` without blocking at all.
+
 Added
 -----
 - Added ``test/test_detection_processor.cpp``, a ``gtest`` suite covering

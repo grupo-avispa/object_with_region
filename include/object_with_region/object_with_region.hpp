@@ -16,6 +16,9 @@
 #ifndef OBJECT_WITH_REGION__OBJECT_WITH_REGION_HPP_
 #define OBJECT_WITH_REGION__OBJECT_WITH_REGION_HPP_
 
+#include <chrono>
+#include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,11 +30,45 @@
 #include "tf2_ros/buffer.hpp"
 #include "tf2_ros/transform_listener.hpp"
 
+#include "object_with_region/msg/object_region3_d.hpp"
 #include "object_with_region/msg/object_region3_d_array.hpp"
 #include "semantic_navigation_msgs/srv/get_region_name.hpp"
 
 namespace object_with_region
 {
+
+// Accumulates the objects resolved for a single detections frame and publishes
+// them once every detection in that frame has been resolved (synchronously, or
+// asynchronously via a region service response/timeout).
+struct PendingFrame
+{
+  object_with_region::msg::ObjectRegion3DArray array_msg;
+  std::size_t pending_count{0};
+  std::function<void (const object_with_region::msg::ObjectRegion3DArray &)> on_complete;
+
+  // Resolve one pending detection: add it to the array if present, then publish
+  // once the last pending detection in this frame has been resolved.
+  void resolve(std::optional<object_with_region::msg::ObjectRegion3D> object_region)
+  {
+    if (object_region) {
+      array_msg.objects.push_back(std::move(*object_region));
+    }
+    if (--pending_count == 0 && on_complete) {
+      on_complete(array_msg);
+    }
+  }
+};
+
+// Tracks one outstanding region-service request so that it resolves its frame
+// exactly once, either from the service response callback or from the timeout
+// reaper, whichever comes first.
+struct PendingRegionRequest
+{
+  std::shared_ptr<PendingFrame> frame;
+  object_with_region::msg::ObjectRegion3D object_region;
+  std::chrono::steady_clock::time_point deadline;
+  bool resolved{false};
+};
 
 class ObjectWithRegionNode : public rclcpp::Node
 {
@@ -67,8 +104,19 @@ private:
   // Get parameters from parameter server
   void get_params();
 
-  // Call the service to get the region name from a position
-  std::string client_call(const geometry_msgs::msg::PointStamped & position);
+  // Asynchronously request the region name for a position and resolve `frame`
+  // with `object_region` (region filled in) once the response or the timeout
+  // reaper resolves it. Does not block the calling callback.
+  void request_region(
+    const std::shared_ptr<PendingFrame> & frame,
+    object_with_region::msg::ObjectRegion3D object_region,
+    const geometry_msgs::msg::PointStamped & position);
+
+  // Periodically resolve (with an empty region) any pending region request
+  // that has been outstanding for longer than service_call_timeout_, so a
+  // service that accepts a request but never responds cannot keep a frame
+  // from ever being published.
+  void reap_timed_out_requests();
 
   // Transform a stamped point into target_frame_. Returns std::nullopt if the
   // transform is not available.
@@ -89,6 +137,12 @@ private:
 
   // Client to get region name from position
   rclcpp::Client<semantic_navigation_msgs::srv::GetRegionName>::SharedPtr get_region_name_client_;
+
+  // Region requests currently awaiting either a service response or a timeout.
+  std::vector<std::shared_ptr<PendingRegionRequest>> pending_requests_;
+
+  // Periodically reaps timed-out entries in pending_requests_.
+  rclcpp::TimerBase::SharedPtr request_reaper_timer_;
 
   // The callback group for info subscribers
   rclcpp::CallbackGroup::SharedPtr sub_cb_group_;
