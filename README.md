@@ -134,8 +134,8 @@ If no transform is available, that detection is skipped and logged as a warning.
 Represents a detected object with its associated region:
 
 ```
-std_msgs/Header header
 vision_msgs/Detection3D object
+string class_name
 string region
 ```
 

@@ -113,7 +113,6 @@ void ObjectWithRegionNode::detection_callback(
         "Could not process detection: missing results or invalid class_id, skipping");
       continue;
     }
-    object_region->header = msg->header;
 
     // Call the service to get the region name
     if (get_region_enabled_) {
@@ -136,7 +135,7 @@ void ObjectWithRegionNode::detection_callback(
     object_region_array_msg.objects.push_back(*object_region);
     RCLCPP_INFO(this->get_logger(),
       "Object %s assigned to region: %s",
-      object_region->object.results[0].hypothesis.class_id.c_str(),
+      object_region->class_name.c_str(),
       object_region->region.c_str());
   }
   // Publish the objects with region
