@@ -14,6 +14,9 @@
 // limitations under the License.
 
 #include <chrono>
+#include <iterator>
+#include <memory>
+#include <utility>
 
 #include "tf2/exceptions.h"
 #include "tf2/time.h"
@@ -32,8 +35,8 @@ namespace
 {
 // Depth of the subscription/publisher queues.
 constexpr int kDefaultQueueDepth = 10;
-// Bound on how long to wait for the region service to become available.
-constexpr std::chrono::seconds kServiceWaitTimeout{1};
+// How often to check pending_requests_ for entries that timed out.
+constexpr std::chrono::seconds kRequestReaperPeriod{1};
 }  // namespace
 
 ObjectWithRegionNode::ObjectWithRegionNode()
@@ -73,9 +76,17 @@ ObjectWithRegionNode::ObjectWithRegionNode()
     objects_with_region_topic_, kDefaultQueueDepth);
 
   if (get_region_enabled_) {
-    // Create client to get region name from position
+    // Create client to get region name from position. It is assigned to
+    // sub_cb_group_ so its response callbacks are serialized with the
+    // subscription callbacks above and pending_requests_ needs no locking.
     get_region_name_client_ = this->create_client<semantic_navigation_msgs::srv::GetRegionName>(
-      get_region_name_service_);
+      get_region_name_service_, rmw_qos_profile_services_default, sub_cb_group_);
+
+    // Periodically resolve region requests that have been pending for too long.
+    request_reaper_timer_ = this->create_wall_timer(
+      kRequestReaperPeriod,
+      std::bind(&ObjectWithRegionNode::reap_timed_out_requests, this),
+      sub_cb_group_);
   }
 }
 
@@ -102,8 +113,17 @@ void ObjectWithRegionNode::detection_callback(
     return;
   }
 
-  object_with_region::msg::ObjectRegion3DArray object_region_array_msg;
-  object_region_array_msg.header = msg->header;
+  auto frame = std::make_shared<PendingFrame>();
+  frame->array_msg.header = msg->header;
+  frame->on_complete =
+    [this](const object_with_region::msg::ObjectRegion3DArray & array_msg) {
+      object_with_region_pub_->publish(array_msg);
+    };
+  // Sentinel: keeps the frame open while this loop is still issuing requests,
+  // so a detection that resolves synchronously below cannot trigger a
+  // premature publish before later detections in this same message have been
+  // processed. Released once the loop below has finished.
+  frame->pending_count = 1;
 
   for (const auto & detection : msg->detections) {
     auto object_region = detection_processor::build_object_region(detection, labels_);
@@ -114,32 +134,33 @@ void ObjectWithRegionNode::detection_callback(
       continue;
     }
 
-    // Call the service to get the region name
-    if (get_region_enabled_) {
-      // Detection3DArray commonly carries the frame in the array header rather than
-      // in each Detection3D, so fall back to it when the per-detection one is empty.
-      geometry_msgs::msg::PointStamped detection_position;
-      detection_position.header =
-        !detection.header.frame_id.empty() ? detection.header : msg->header;
-      detection_position.point = detection.bbox.center.position;
+    ++frame->pending_count;
 
-      auto target_position = transform_to_target_frame(detection_position);
-      if (!target_position) {continue;}
-
-      auto region_name = client_call(*target_position);
-      if (region_name.empty()) {continue;}
-      object_region->region = region_name;
+    if (!get_region_enabled_) {
+      RCLCPP_INFO(
+        this->get_logger(), "Object %s assigned to region: %s",
+        object_region->class_name.c_str(), object_region->region.c_str());
+      frame->resolve(std::move(object_region));
+      continue;
     }
 
-    // Add to array
-    object_region_array_msg.objects.push_back(*object_region);
-    RCLCPP_INFO(this->get_logger(),
-      "Object %s assigned to region: %s",
-      object_region->class_name.c_str(),
-      object_region->region.c_str());
+    // Detection3DArray commonly carries the frame in the array header rather than
+    // in each Detection3D, so fall back to it when the per-detection one is empty.
+    geometry_msgs::msg::PointStamped detection_position;
+    detection_position.header =
+      !detection.header.frame_id.empty() ? detection.header : msg->header;
+    detection_position.point = detection.bbox.center.position;
+
+    auto target_position = transform_to_target_frame(detection_position);
+    if (!target_position) {
+      frame->resolve(std::nullopt);
+      continue;
+    }
+
+    request_region(frame, std::move(*object_region), *target_position);
   }
-  // Publish the objects with region
-  object_with_region_pub_->publish(object_region_array_msg);
+
+  frame->resolve(std::nullopt);  // release the sentinel
 }
 
 
@@ -157,33 +178,68 @@ std::optional<geometry_msgs::msg::PointStamped> ObjectWithRegionNode::transform_
 }
 
 
-std::string ObjectWithRegionNode::client_call(const geometry_msgs::msg::PointStamped & position)
+void ObjectWithRegionNode::request_region(
+  const std::shared_ptr<PendingFrame> & frame,
+  object_with_region::msg::ObjectRegion3D object_region,
+  const geometry_msgs::msg::PointStamped & position)
 {
-  std::string result;
-    // Create the request
-  auto request = std::make_shared<semantic_navigation_msgs::srv::GetRegionName::Request>();
-  request->position = position;
-    // Wait for the service with a bounded total timeout: an unbounded retry
-    // loop here would block this callback (and its callback group) forever
-    // if the service never becomes available.
-  if (!get_region_name_client_->wait_for_service(kServiceWaitTimeout)) {
+  // Rather than blocking on wait_for_service(), skip immediately if the
+  // service is not available: this callback must never block the executor.
+  if (!get_region_name_client_->service_is_ready()) {
     RCLCPP_ERROR(
       this->get_logger(), "Service %s not available, skipping",
       get_region_name_service_.c_str());
-    return result;       // empty result
+    frame->resolve(std::nullopt);
+    return;
   }
 
-  auto future = get_region_name_client_->async_send_request(request);
-  // Timeout to guarantee a graceful finish if the service accepts the
-  // request but never responds.
-  std::future_status status = future.wait_for(
+  auto pending = std::make_shared<PendingRegionRequest>();
+  pending->frame = frame;
+  pending->object_region = std::move(object_region);
+  pending->deadline = std::chrono::steady_clock::now() +
+    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
     std::chrono::duration<double>(service_call_timeout_));
-  if (status == std::future_status::ready) {
-    result = future.get()->region_name;
-  } else {
-    RCLCPP_ERROR(this->get_logger(), "Failed to call service %s", get_region_name_service_.c_str());
+
+  auto request = std::make_shared<semantic_navigation_msgs::srv::GetRegionName::Request>();
+  request->position = position;
+
+  get_region_name_client_->async_send_request(
+    request,
+    [this, pending](
+      rclcpp::Client<semantic_navigation_msgs::srv::GetRegionName>::SharedFuture future) {
+      // The reaper may already have resolved this request as timed out.
+      if (pending->resolved) {return;}
+      pending->resolved = true;
+
+      const auto & region_name = future.get()->region_name;
+      if (region_name.empty()) {
+        pending->frame->resolve(std::nullopt);
+        return;
+      }
+      pending->object_region.region = region_name;
+      RCLCPP_INFO(
+        this->get_logger(), "Object %s assigned to region: %s",
+        pending->object_region.class_name.c_str(), pending->object_region.region.c_str());
+      pending->frame->resolve(std::move(pending->object_region));
+    });
+
+  pending_requests_.push_back(pending);
+}
+
+
+void ObjectWithRegionNode::reap_timed_out_requests()
+{
+  const auto now = std::chrono::steady_clock::now();
+  for (auto it = pending_requests_.begin(); it != pending_requests_.end(); ) {
+    auto & pending = *it;
+    if (!pending->resolved && now >= pending->deadline) {
+      pending->resolved = true;
+      RCLCPP_ERROR(
+        this->get_logger(), "Timed out waiting for service %s", get_region_name_service_.c_str());
+      pending->frame->resolve(std::nullopt);
+    }
+    it = pending->resolved ? pending_requests_.erase(it) : std::next(it);
   }
-  return result;
 }
 
 
