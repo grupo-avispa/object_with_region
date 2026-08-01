@@ -101,6 +101,27 @@ void ObjectWithRegionNode::detection_callback(
   object_region_array_msg.header = msg->header;
 
   for (const auto & detection : msg->detections) {
+    if (detection.results.empty()) {
+      RCLCPP_WARN(this->get_logger(), "Detection without results, skipping");
+      continue;
+    }
+
+    const auto & class_id_str = detection.results[0].hypothesis.class_id;
+    int class_index = 0;
+    try {
+      class_index = std::stoi(class_id_str);
+    } catch (const std::exception &) {
+      RCLCPP_WARN(
+        this->get_logger(), "Non-numeric class_id '%s', skipping", class_id_str.c_str());
+      continue;
+    }
+    if (class_index < 0 || static_cast<std::size_t>(class_index) >= labels_.size()) {
+      RCLCPP_WARN(
+        this->get_logger(), "class_id %d out of range (%zu labels), skipping",
+        class_index, labels_.size());
+      continue;
+    }
+
     // Transform the detection to the map frame
     geometry_msgs::msg::PointStamped detection_position;
     detection_position.header = detection.header;
@@ -109,16 +130,9 @@ void ObjectWithRegionNode::detection_callback(
     // Create ObjectRegion3D message
     object_with_region::msg::ObjectRegion3D object_region_msg;
     object_region_msg.object = detection;
-    try {
-      object_region_msg.object.results[0].hypothesis.class_id =
-        labels_[std::stoi(detection.results[0].hypothesis.class_id)];
-      object_region_msg.region = "unknown";
-      object_region_msg.header = msg->header;
-    } catch (const std::exception & e) {
-      RCLCPP_WARN(this->get_logger(), "Could not process detection: %s",
-        detection.results[0].hypothesis.class_id.c_str());
-      continue;
-    }
+    object_region_msg.object.results[0].hypothesis.class_id = labels_[class_index];
+    object_region_msg.region = "unknown";
+    object_region_msg.header = msg->header;
 
     // Call the service to get the region name
     if (get_region_enabled_) {
