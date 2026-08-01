@@ -120,6 +120,27 @@ install(DIRECTORY launch params
   DESTINATION share/${PROJECT_NAME}/
 )
 
+# #########
+# # Test ##
+# #########
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_detection_processor
+    test/test_detection_processor.cpp
+    src/detection_processor.cpp
+  )
+  target_include_directories(test_detection_processor PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+  )
+  target_link_libraries(test_detection_processor
+    ${vision_msgs_TARGETS}
+    "${cpp_typesupport_target}"
+  )
+endif()
+
 # ##################################
 # # ament specific configuration  ##
 # ##################################
