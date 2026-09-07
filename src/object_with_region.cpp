@@ -145,7 +145,7 @@ ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_shutdown(
 
 void ObjectWithRegionNode::label_info_callback(const vision_msgs::msg::LabelInfo::SharedPtr info)
 {
-  for (const auto & l_class: info->class_map) {
+  for (const auto & l_class : info->class_map) {
     labels_.push_back(l_class.class_name);
   }
   RCLCPP_INFO(this->get_logger(), "Received label info with %ld classes", labels_.size());
@@ -374,4 +374,4 @@ void ObjectWithRegionNode::get_params()
     "The parameter target_frame is set to: [%s]", target_frame_.c_str());
 }
 
-} // namespace object_with_region
+}  // namespace object_with_region

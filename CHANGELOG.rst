@@ -72,6 +72,19 @@ Fixed
   frame instead of the frame it expects.
 - Detection position now falls back to the ``Detection3DArray`` header when a
   single ``Detection3D`` does not carry its own ``frame_id``.
+- Fixed ``ament_copyright`` failure by adding a ``CONTRIBUTING.md`` file to the
+  package root.
+- Fixed ``ament_cpplint`` errors in ``include/object_with_region/object_with_region.hpp``
+  (added ``#include <utility>`` for ``std::move``, removed the redundant blank
+  line before the class closing brace, two spaces before the ``namespace``
+  end comment) and in ``src/object_with_region.cpp`` (space around the colon in
+  the ``label_info_callback()`` range-based ``for``, two spaces before the
+  ``namespace`` end comment).
+- Fixed ``ament_uncrustify`` divergence in ``object_with_region.hpp`` by removing
+  the space in ``std::function<void(...)>`` for ``PendingFrame::on_complete``.
+- Fixed ``ament_flake8`` ``E131`` continuation-line indent in
+  ``launch/default.launch.py`` for the ``params_file`` and ``autostart``
+  argument descriptions.
 
 [0.1.0] - 25-07-2026
 =====================

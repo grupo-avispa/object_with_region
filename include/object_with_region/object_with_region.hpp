@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "lifecycle_msgs/msg/state.hpp"
@@ -47,7 +48,7 @@ struct PendingFrame
 {
   object_with_region::msg::ObjectRegion3DArray array_msg;
   std::size_t pending_count{0};
-  std::function<void (const object_with_region::msg::ObjectRegion3DArray &)> on_complete;
+  std::function<void(const object_with_region::msg::ObjectRegion3DArray &)> on_complete;
 
   // Resolve one pending detection: add it to the array if present, then publish
   // once the last pending detection in this frame has been resolved.
@@ -200,9 +201,8 @@ private:
 
   /// Class labels of the neural network.
   std::vector<std::string> labels_;
-
 };
 
-} // namespace object_with_region
+}  // namespace object_with_region
 
 #endif  // OBJECT_WITH_REGION__OBJECT_WITH_REGION_HPP_

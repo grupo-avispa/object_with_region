@@ -48,7 +48,7 @@ def generate_launch_description():
         'params_file',
         default_value=default_params_file,
         description='Full path to the ROS2 parameters file with detection '
-                     'configuration'
+                    'configuration'
     )
 
     declare_log_level_arg = DeclareLaunchArgument(
@@ -61,7 +61,7 @@ def generate_launch_description():
         'autostart',
         default_value='True',
         description='Automatically configure and activate '
-                     'object_with_region on launch'
+                    'object_with_region on launch'
     )
 
     # Prepare the ROS2 lifecycle node.
