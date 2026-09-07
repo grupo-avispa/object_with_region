@@ -18,8 +18,8 @@
 #include <memory>
 #include <utility>
 
-#include "tf2/exceptions.h"
-#include "tf2/time.h"
+#include "tf2/exceptions.hpp"
+#include "tf2/time.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include "object_with_region/detection_processor.hpp"
@@ -91,7 +91,7 @@ ObjectWithRegionNode::CallbackReturn ObjectWithRegionNode::on_configure(
     // sub_cb_group_ so its response callbacks are serialized with the
     // subscription callbacks above and pending_requests_ needs no locking.
     get_region_name_client_ = this->create_client<semantic_navigation_msgs::srv::GetRegionName>(
-      get_region_name_service_, rmw_qos_profile_services_default, sub_cb_group_);
+      get_region_name_service_, rclcpp::ServicesQoS(), sub_cb_group_);
 
     // Periodically resolve region requests that have been pending for too long.
     request_reaper_timer_ = this->create_wall_timer(

@@ -52,7 +52,7 @@ def generate_launch_description():
     )
 
     declare_log_level_arg = DeclareLaunchArgument(
-        name='log-level',
+        name='log_level',
         default_value='info',
         description='Logging level (info, debug, ...)'
     )
@@ -76,7 +76,7 @@ def generate_launch_description():
         arguments=[
             '--ros-args',
             '--log-level',
-            ['object_with_region:=', LaunchConfiguration('log-level')]]
+            ['object_with_region:=', LaunchConfiguration('log_level')]]
     )
 
     # object_with_region_node is a managed lifecycle node: it does nothing
